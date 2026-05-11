@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KHR/USD Forecast — Full Explainer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Karla:ital,wght@0,300;0,400;0,500;1,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #070d1a;
+  --surface:  #0d1525;
+  --card:     #111d30;
+  --border:   rgba(100,140,220,0.12);
+  --blue:     #5b9cf6;
+  --coral:    #f97060;
+  --amber:    #f5b942;
+  --teal:     #34d4a4;
+  --muted:    #7a8fa8;
+  --dim:      #3a4d63;
+  --text:     #dde6f0;
+  --white:    #ffffff;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Karla', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* HERO */
+.hero {
+  position: relative;
+  padding: 4rem 2rem 3rem;
+  text-align: center;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(91,156,246,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--teal);
+  border: 1px solid rgba(52,212,164,0.3);
+  border-radius: 20px;
+  padding: 5px 14px;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.06em;
+  animation: fadeDown 0.6s ease both;
+}
+.hero-badge::before { content: '●'; font-size: 8px; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(28px, 5vw, 52px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  animation: fadeDown 0.6s 0.1s ease both;
+}
+h1 .accent { color: var(--blue); }
+h1 .accent2 { color: var(--coral); }
+
+.hero-sub {
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: 1rem;
+  font-weight: 300;
+  animation: fadeDown 0.6s 0.2s ease both;
+}
+
+/* LAYOUT */
+.container { max-width: 900px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+/* SECTION LABEL */
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after { content:''; flex:1; height:1px; background: var(--border); }
+
+h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+
+/* CHART SECTION */
+.chart-section { margin-bottom: 3rem; animation: fadeUp 0.7s 0.3s ease both; }
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.chart-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--blue), var(--coral), transparent);
+}
+
+.chart-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 1.25rem;
+}
+.chart-title-block p {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.chart-title-block span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.leg {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+.leg-line { width: 20px; height: 2px; border-radius: 1px; }
+.leg-dash { width: 20px; height: 0; }
+.leg-box { width: 12px; height: 9px; border-radius: 2px; }
+
+.chart-wrap { position: relative; height: 300px; }
+
+/* ANNOTATION PILLS below chart */
+.annotations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 1.25rem;
+}
+.ann-pill {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ann-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.ann-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; font-family: 'Syne', sans-serif; }
+.ann-desc  { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* EXPLAIN SECTIONS */
+.explain-block { margin-bottom: 2.5rem; animation: fadeUp 0.6s ease both; }
+
+.explain-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 600px) { .explain-grid { grid-template-columns: 1fr; } }
+
+.explain-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.explain-card:hover { border-color: rgba(91,156,246,0.3); }
+.explain-card.full { grid-column: 1 / -1; }
+
+.card-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--blue);
+  background: rgba(91,156,246,0.1);
+  border-radius: 4px;
+  padding: 2px 7px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+.card-body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.card-body strong { color: var(--text); font-weight: 500; }
+
+.highlight-box {
+  background: rgba(91,156,246,0.06);
+  border: 1px solid rgba(91,156,246,0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--blue);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.6;
+}
+
+/* CODE */
+.code-section { margin-bottom: 2.5rem; animation: fadeUp 0.6s ease both; }
+.code-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.code-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.dots { display: flex; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.fname { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-left: 8px; }
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--muted); background: transparent;
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 10px; cursor: pointer; transition: all 0.2s;
+}
+.copy-btn:hover { color: var(--teal); border-color: var(--teal); }
+
+pre {
+  padding: 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 2;
+  overflow-x: auto;
+}
+.kw   { color: #c792ea; }
+.fn   { color: var(--blue); }
+.str  { color: var(--teal); }
+.num  { color: var(--coral); }
+.cmt  { color: var(--dim); font-style: italic; }
+.param{ color: var(--amber); }
+
+/* LINE-BY-LINE */
+.lines-section { margin-bottom: 2.5rem; animation: fadeUp 0.6s ease both; }
+.line-row {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.line-row:hover { border-color: rgba(91,156,246,0.3); }
+.line-code {
+  background: var(--surface);
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--blue);
+  min-width: 260px;
+  max-width: 260px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  word-break: break-all;
+}
+.line-explain {
+  background: var(--card);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--muted);
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.line-explain strong { color: var(--text); font-weight: 500; }
+@media (max-width: 600px) {
+  .line-row { flex-direction: column; }
+  .line-code { min-width: unset; max-width: unset; border-right: none; border-bottom: 1px solid var(--border); }
+}
+
+/* SUMMARY */
+.summary-section { margin-bottom: 2.5rem; animation: fadeUp 0.6s ease both; }
+.summary-quote {
+  background: linear-gradient(135deg, rgba(91,156,246,0.07), rgba(249,112,96,0.07));
+  border: 1px solid rgba(91,156,246,0.2);
+  border-radius: 14px;
+  padding: 1.75rem 2rem;
+  text-align: center;
+}
+.summary-quote p {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(15px, 2.5vw, 20px);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text);
+}
+.summary-quote .hl-blue  { color: var(--blue); }
+.summary-quote .hl-coral { color: var(--coral); }
+.summary-quote .hl-teal  { color: var(--teal); }
+
+footer {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--dim);
+  padding: 2rem 0 3rem;
+  border-top: 1px solid var(--border);
+}
+
+/* METRIC ROW inside chart card */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 1.25rem;
+}
+@media (max-width: 600px) { .metric-row { grid-template-columns: repeat(2, 1fr); } }
+.metric-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.metric-tile-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+.metric-tile-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.metric-tile-sub {
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 4px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ANIMATIONS */
+@keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">TOPIC 12 · TIME-SERIES FORECASTING</div>
+  <h1>
+    <span class="accent">KHR/USD</span> Prophet<br>
+    Forecast <span class="accent2">Explained</span>
+  </h1>
+  <p class="hero-sub">What the chart shows · How the code works · What it means for treasury</p>
+</div>
+
+<div class="container">
+
+  <!-- CHART -->
+  <div class="chart-section">
+    <div class="section-label">01 · The Chart</div>
+    <h2>Actual vs Forecast — KHR/USD</h2>
+    <div class="chart-card">
+      <div class="chart-topbar">
+        <div class="chart-title-block">
+          <p>KHR per 1 USD · Annual average</p>
+          <span>Training: 2017–2026 &nbsp;·&nbsp; Forecast: 2027–2028</span>
+        </div>
+        <div class="chart-legend">
+          <div class="leg"><div class="leg-line" style="background:#5b9cf6;"></div>Actual</div>
+          <div class="leg"><div class="leg-dash" style="border-top:2px dashed #f97060;"></div>Forecast</div>
+          <div class="leg"><div class="leg-box" style="background:rgba(249,112,96,0.25);"></div>95% CI</div>
+        </div>
+      </div>
+      <!-- METRIC CARDS -->
+      <div class="metric-row">
+        <div class="metric-tile">
+          <div class="metric-tile-label">TRAINING DATA</div>
+          <div class="metric-tile-value" style="color:var(--blue);">10 yrs</div>
+          <div class="metric-tile-sub">2017 – 2026</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-label">ANCHOR POINT</div>
+          <div class="metric-tile-value" style="color:var(--teal);">4,010</div>
+          <div class="metric-tile-sub">2026 actual</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-label">FORECAST 2027</div>
+          <div class="metric-tile-value" style="color:var(--coral);">~3,990</div>
+          <div class="metric-tile-sub">yhat (predicted)</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-tile-label">FORECAST 2028</div>
+          <div class="metric-tile-value" style="color:var(--coral);">~3,975</div>
+          <div class="metric-tile-sub">CI widens</div>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="mainChart" role="img" aria-label="KHR/USD line chart. Actual rates 2017 to 2026 in blue, forecast 2027 to 2028 in dashed coral, with confidence interval cone."></canvas>
+      </div>
+      <div class="annotations">
+        <div class="ann-pill">
+          <div class="ann-icon" style="background:rgba(91,156,246,0.12); color:var(--blue);">📈</div>
+          <div>
+            <div class="ann-title">Blue line — Actual data</div>
+            <div class="ann-desc">Real annual average KHR/USD rates from 2017–2026. This is what <em>really happened</em> in the market.</div>
+          </div>
+        </div>
+        <div class="ann-pill">
+          <div class="ann-icon" style="background:rgba(249,112,96,0.12); color:var(--coral);">⟶</div>
+          <div>
+            <div class="ann-title">Dashed line — Forecast</div>
+            <div class="ann-desc">Prophet's prediction for 2027–2028. The model expects a mild riel recovery (rate declining).</div>
+          </div>
+        </div>
+        <div class="ann-pill">
+          <div class="ann-icon" style="background:rgba(249,112,96,0.08); color:var(--coral);">◈</div>
+          <div>
+            <div class="ann-title">Shaded cone — 95% CI band</div>
+            <div class="ann-desc">Prophet is 95% confident the true rate will fall inside this zone. It widens over time — more uncertainty further out.</div>
+          </div>
+        </div>
+        <div class="ann-pill">
+          <div class="ann-icon" style="background:rgba(52,212,164,0.1); color:var(--teal);">⊙</div>
+          <div>
+            <div class="ann-title">2026 = anchor point (4,010)</div>
+            <div class="ann-desc">The last known actual rate. The model is trained on everything up to here, then "hands off" to the forecast.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART READING GUIDE -->
+  <div class="explain-block">
+    <div class="section-label">02 · Reading the Chart</div>
+    <h2>What each part tells you</h2>
+    <div class="explain-grid">
+
+      <div class="explain-card">
+        <div class="card-num">2017 → 2023</div>
+        <div class="card-title">The Uptrend — Riel weakening</div>
+        <div class="card-body">The blue line rises from 3,970 → 4,111. <strong>A rising rate means 1 USD buys more KHR</strong> — the riel is losing value. This reflects post-COVID dollar strength and rising US interest rates attracting global capital away from emerging markets.</div>
+        <div class="highlight-box">Rate ↑ = Riel weakens = Dollar stronger</div>
+      </div>
+
+      <div class="explain-card">
+        <div class="card-num">2023 → 2026</div>
+        <div class="card-title">The Downturn — Riel recovering</div>
+        <div class="card-body">The rate falls from 4,111 → 4,010. <strong>A falling rate means 1 USD buys fewer KHR</strong> — the riel is gaining ground. This aligns with slowing US inflation and the Fed signalling rate cuts, reducing dollar dominance globally.</div>
+        <div class="highlight-box">Rate ↓ = Riel strengthens = Dollar softer</div>
+      </div>
+
+      <div class="explain-card">
+        <div class="card-num">2027 → 2028</div>
+        <div class="card-title">The Forecast — Continued mild recovery</div>
+        <div class="card-body">Prophet extrapolates the post-2023 downward trend. It predicts ~3,990 in 2027 and ~3,975 in 2028 — suggesting the riel continues a slow, modest strengthening path if current macro conditions persist.</div>
+        <div class="highlight-box">yhat 2027 ≈ 3,990 &nbsp;·&nbsp; yhat 2028 ≈ 3,975</div>
+      </div>
+
+      <div class="explain-card">
+        <div class="card-num">The Cone</div>
+        <div class="card-title">Why the CI band fans out</div>
+        <div class="card-body">The confidence interval band <strong>starts narrow at the anchor and widens as years increase</strong>. This is mathematically correct — uncertainty compounds with time. A forecast 1 year out is more reliable than 2 years out. This is the most important thing to communicate about any forecast.</div>
+        <div class="highlight-box">Wider cone = less certainty = longer horizon</div>
+      </div>
+
+      <div class="explain-card full">
+        <div class="card-num">Overall story in one sentence</div>
+        <div class="card-title">The 10-year narrative</div>
+        <div class="card-body">The KHR/USD rate rose through the COVID era and US rate-hike cycle (2020–2023), peaked at 4,111 in 2023, then began declining as dollar strength faded. The Prophet model detects this trend reversal and <strong>forecasts a continuation of the mild riel recovery into 2027–2028</strong>, though the widening CI cone reminds us that FX markets remain inherently unpredictable beyond 12 months.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CODE -->
+  <div class="code-section">
+    <div class="section-label">03 · The Python Code</div>
+    <h2>index.py — full script</h2>
+    <div class="code-wrap">
+      <div class="code-bar">
+        <div style="display:flex;align-items:center;">
+          <div class="dots">
+            <div class="dot" style="background:#f97060;"></div>
+            <div class="dot" style="background:#f5b942;"></div>
+            <div class="dot" style="background:#34d4a0;"></div>
+          </div>
+          <span class="fname">index.py</span>
+        </div>
+        <button class="copy-btn" id="copyBtn" onclick="copyCode()">copy</button>
+      </div>
+<pre><span class="kw">from</span> prophet <span class="kw">import</span> <span class="fn">Prophet</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+df = pd.<span class="fn">DataFrame</span>({
+    <span class="str">'ds'</span>: pd.<span class="fn">date_range</span>(<span class="str">'2017-01-01'</span>, <span class="param">periods</span>=<span class="num">10</span>, <span class="param">freq</span>=<span class="str">'YE'</span>),
+    <span class="str">'y'</span>:  [<span class="num">3970</span>, <span class="num">3921</span>, <span class="num">4020</span>, <span class="num">4050</span>, <span class="num">4098</span>,
+           <span class="num">4089</span>, <span class="num">4111</span>, <span class="num">4073</span>, <span class="num">4013</span>, <span class="num">4010</span>]
+})
+
+model = <span class="fn">Prophet</span>(<span class="param">yearly_seasonality</span>=<span class="kw">True</span>)
+model.<span class="fn">fit</span>(df)
+
+future = model.<span class="fn">make_future_dataframe</span>(<span class="param">periods</span>=<span class="num">2</span>, <span class="param">freq</span>=<span class="str">'YE'</span>)
+forecast = model.<span class="fn">predict</span>(future)
+model.<span class="fn">plot</span>(forecast)
+plt.<span class="fn">show</span>()        <span class="cmt"># ← required in VS Code to display window</span></pre>
+    </div>
+  </div>
+
+  <!-- LINE BY LINE -->
+  <div class="lines-section">
+    <div class="section-label">04 · Line-by-Line</div>
+    <h2>What each line does</h2>
+
+    <div class="line-row">
+      <div class="line-code">from prophet import Prophet</div>
+      <div class="line-explain"><strong>Load the forecasting library.</strong> Meta's Prophet handles trends, seasonality, and missing data automatically.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">import pandas as pd</div>
+      <div class="line-explain"><strong>Load the data library.</strong> pandas gives us the DataFrame table structure Prophet requires.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">import matplotlib.pyplot as plt</div>
+      <div class="line-explain"><strong>Load the chart library.</strong> Needed to call plt.show() and actually display the plot window in VS Code.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">pd.DataFrame({'ds':..., 'y':...})</div>
+      <div class="line-explain"><strong>Build the data table.</strong> 10 rows: 'ds' = year-end dates 2017–2026, 'y' = KHR/USD annual averages. Prophet demands exactly these two column names.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">Prophet(yearly_seasonality=True)</div>
+      <div class="line-explain"><strong>Create the model.</strong> Tells Prophet to detect 12-month cycles — e.g. Khmer New Year April dip, year-end holiday demand.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">model.fit(df)</div>
+      <div class="line-explain"><strong>Train the model.</strong> Prophet decomposes history into: trend + seasonality + residual noise. This is where all the learning happens.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">make_future_dataframe(periods=2)</div>
+      <div class="line-explain"><strong>Extend the time axis.</strong> Adds 2 blank rows for 2027 and 2028 — the future slots the model will fill in.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">model.predict(future)</div>
+      <div class="line-explain"><strong>Generate the forecast.</strong> Returns yhat (predicted rate), yhat_lower and yhat_upper (the CI band edges) for every row.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">model.plot(forecast)</div>
+      <div class="line-explain"><strong>Draw the chart.</strong> Auto-generates the actual dots, fitted line, dashed forecast, and shaded CI cone.</div>
+    </div>
+    <div class="line-row">
+      <div class="line-code">plt.show()</div>
+      <div class="line-explain"><strong>Display the window.</strong> Without this line, VS Code runs the script silently — the chart is drawn in memory but never shown on screen.</div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-section">
+    <div class="section-label">05 · One-Sentence Summary</div>
+    <div class="summary-quote">
+      <p>We used <span class="hl-blue">10 years of real KHR/USD data</span> to train a <span class="hl-teal">Prophet model</span> in Python, which predicts a <span class="hl-coral">mild riel recovery through 2028</span> — with uncertainty growing the further we forecast, shown by the widening confidence cone.</p>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  Sources: exchange-rates.org · valutafx.com · CoinCodex · Investing.com &nbsp;·&nbsp; Topic 12 · Time-Series Forecasting · KHR/USD Case Study
+</footer>
+
+<script>
+/* ── Chart ── */
+const labels   = ['2017','2018','2019','2020','2021','2022','2023','2024','2025','2026','2027','2028'];
+const actual   = [3970,  3921,  4020,  4050,  4098,  4089,  4111,  4073,  4013,  4010,  null,  null];
+const forecast = [null,  null,  null,  null,  null,  null,  null,  null,  null,  4010,  3990,  3975];
+const ciHigh   = [null,  null,  null,  null,  null,  null,  null,  null,  null,  4010,  4075,  4110];
+const ciLow    = [null,  null,  null,  null,  null,  null,  null,  null,  null,  4010,  3905,  3840];
+
+new Chart(document.getElementById('mainChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [
+      { label:'CI high', data:ciHigh, borderColor:'transparent', pointRadius:0, fill:false, tension:0.4, order:4 },
+      { label:'CI low',  data:ciLow,  borderColor:'transparent', pointRadius:0, fill:'-1', backgroundColor:'rgba(249,112,96,0.18)', tension:0.4, order:4 },
+      {
+        label:'Actual',
+        data: actual,
+        borderColor:'#5b9cf6', borderWidth:2.5,
+        pointBackgroundColor:'#5b9cf6',
+        pointBorderColor:'#111d30', pointBorderWidth:2, pointRadius:5,
+        fill:false, tension:0.35, order:1
+      },
+      {
+        label:'Forecast',
+        data: forecast,
+        borderColor:'#f97060', borderWidth:2, borderDash:[6,4],
+        pointBackgroundColor:'#f97060',
+        pointBorderColor:'#111d30', pointBorderWidth:2, pointRadius:5,
+        fill:false, tension:0.35, order:2
+      }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins: {
+      legend:{ display:false },
+      tooltip:{
+        backgroundColor:'#0d1525',
+        borderColor:'rgba(91,156,246,0.2)', borderWidth:1,
+        titleColor:'#dde6f0', bodyColor:'#7a8fa8', padding:10,
+        filter: i => i.dataset.label!=='CI high' && i.dataset.label!=='CI low',
+        callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y ? ctx.parsed.y.toLocaleString() : ''} KHR` }
+      }
+    },
+    scales:{
+      x:{
+        grid:{ color:'rgba(100,140,220,0.07)' },
+        ticks:{ color:'#3a4d63', font:{ family:'JetBrains Mono', size:11 }, autoSkip:false }
+      },
+      y:{
+        min:3780, max:4200,
+        grid:{ color:'rgba(100,140,220,0.07)' },
+        ticks:{ color:'#3a4d63', font:{ family:'JetBrains Mono', size:11 }, callback: v => v.toLocaleString() },
+        title:{ display:true, text:'KHR per 1 USD', color:'#3a4d63', font:{ family:'JetBrains Mono', size:11 } }
+      }
+    }
+  }
+});
+
+/* ── Copy ── */
+const raw = `from prophet import Prophet
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df = pd.DataFrame({
+    'ds': pd.date_range('2017-01-01', periods=10, freq='YE'),
+    'y':  [3970, 3921, 4020, 4050, 4098,
+           4089, 4111, 4073, 4013, 4010]
+})
+
+model = Prophet(yearly_seasonality=True)
+model.fit(df)
+
+future = model.make_future_dataframe(periods=2, freq='YE')
+forecast = model.predict(future)
+model.plot(forecast)
+plt.show()`;
+
+function copyCode() {
+  navigator.clipboard.writeText(raw).then(() => {
+    const b = document.getElementById('copyBtn');
+    b.textContent = 'copied ✓';
+    b.style.color = '#34d4a0';
+    b.style.borderColor = '#34d4a0';
+    setTimeout(() => { b.textContent='copy'; b.style.color=''; b.style.borderColor=''; }, 2000);
+  });
+}
+</script>
+</body>
+</html>

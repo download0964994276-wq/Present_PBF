@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Forecasting Models</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #09090b;
+    --surface: #111113;
+    --surface2: #18181b;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.16);
+    --text: #f4f4f5;
+    --muted: #71717a;
+    --c1: #a78bfa; --c1d: #1e1333;
+    --c2: #34d399; --c2d: #052e20;
+    --c3: #fb923c; --c3d: #2c1506;
+    --c4: #60a5fa; --c4d: #0c1f3d;
+    --c5: #fbbf24; --c5d: #2d1e04;
+    --c6: #f472b6; --c6d: #2d0a1e;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.6;
+  }
+
+  /* ── grid lines bg ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ── HERO ── */
+  header {
+    position: relative;
+    padding: 6rem 0 4rem;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    top: -80px; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(167,139,250,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--c1);
+    border: 1px solid rgba(167,139,250,0.35);
+    padding: 6px 16px;
+    border-radius: 999px;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 1rem;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+    margin-bottom: 3rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 3rem;
+    margin-bottom: 0;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .stat { text-align: center; }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
+  }
+  .stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 4rem 0 2rem;
+    animation: fadeUp 0.5s ease both;
+  }
+  .section-label span {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── CARDS GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+    transition: background 0.3s;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card:hover { background: var(--surface2); }
+
+  /* corner number */
+  .card-num {
+    position: absolute;
+    top: 1.5rem; right: 1.75rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 800;
+    opacity: 0.04;
+    line-height: 1;
+    transition: opacity 0.3s;
+  }
+  .card:hover .card-num { opacity: 0.08; }
+
+  /* accent bar */
+  .card-bar {
+    height: 3px;
+    width: 36px;
+    border-radius: 999px;
+    margin-bottom: 1.25rem;
+    transition: width 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .card:hover .card-bar { width: 60px; }
+
+  /* icon */
+  .card-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    margin-bottom: 1rem;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.01em;
+  }
+
+  .card-desc {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* models list */
+  .models {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 1.25rem;
+  }
+
+  .model-tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    letter-spacing: 0.02em;
+    transition: transform 0.15s;
+  }
+  .model-tag:hover { transform: translateY(-1px); }
+
+  /* use-case */
+  .use-case {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 1.1rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--border-hover);
+  }
+  .use-case strong { color: var(--text); font-weight: 400; }
+
+  /* libs */
+  .libs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .libs-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-right: 2px;
+  }
+  .lib-chip {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.05);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .card:hover .lib-chip { border-color: var(--border-hover); color: var(--text); }
+
+  /* ── COLOR THEMES PER CARD ── */
+  .c1 .card-bar { background: var(--c1); }
+  .c1 .card-icon { background: var(--c1d); color: var(--c1); }
+  .c1 .card-num { color: var(--c1); }
+  .c1 .model-tag { background: var(--c1d); border-color: rgba(167,139,250,0.2); color: var(--c1); }
+
+  .c2 .card-bar { background: var(--c2); }
+  .c2 .card-icon { background: var(--c2d); color: var(--c2); }
+  .c2 .card-num { color: var(--c2); }
+  .c2 .model-tag { background: var(--c2d); border-color: rgba(52,211,153,0.2); color: var(--c2); }
+
+  .c3 .card-bar { background: var(--c3); }
+  .c3 .card-icon { background: var(--c3d); color: var(--c3); }
+  .c3 .card-num { color: var(--c3); }
+  .c3 .model-tag { background: var(--c3d); border-color: rgba(251,146,60,0.2); color: var(--c3); }
+
+  .c4 .card-bar { background: var(--c4); }
+  .c4 .card-icon { background: var(--c4d); color: var(--c4); }
+  .c4 .card-num { color: var(--c4); }
+  .c4 .model-tag { background: var(--c4d); border-color: rgba(96,165,250,0.2); color: var(--c4); }
+
+  .c5 .card-bar { background: var(--c5); }
+  .c5 .card-icon { background: var(--c5d); color: var(--c5); }
+  .c5 .card-num { color: var(--c5); }
+  .c5 .model-tag { background: var(--c5d); border-color: rgba(251,191,36,0.2); color: var(--c5); }
+
+  .c6 .card-bar { background: var(--c6); }
+  .c6 .card-icon { background: var(--c6d); color: var(--c6); }
+  .c6 .card-num { color: var(--c6); }
+  .c6 .model-tag { background: var(--c6d); border-color: rgba(244,114,182,0.2); color: var(--c6); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card:nth-child(3) { animation-delay: 0.15s; }
+  .card:nth-child(4) { animation-delay: 0.2s; }
+  .card:nth-child(5) { animation-delay: 0.25s; }
+  .card:nth-child(6) { animation-delay: 0.3s; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .stats-row { gap: 1.5rem; }
+    .grid { grid-template-columns: 1fr; }
+    h1 { font-size: 2.2rem; }
+    footer { flex-direction: column; gap: 0.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header>
+    <div class="hero-glow"></div>
+    <div class="badge">&#9632; Python · Time Series · Forecasting</div>
+    <h1>Forecasting<br><span>Model Landscape</span></h1>
+    <p class="hero-sub">// A complete reference to Python's 6 major forecasting paradigms</p>
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-num">6</span>
+        <span class="stat-label">Categories</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">30+</span>
+        <span class="stat-label">Models</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">15+</span>
+        <span class="stat-label">Libraries</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- SECTION LABEL -->
+  <div class="section-label">
+    <span>Model categories</span>
+  </div>
+
+  <!-- CARDS GRID -->
+  <div class="grid">
+
+    <!-- 01 Statistical -->
+    <div class="card c1">
+      <span class="card-num">01</span>
+      <div class="card-bar"></div>
+      <div class="card-icon">&#8767;</div>
+      <div class="card-title">Statistical / Classical</div>
+      <div class="card-desc">Foundational time series models</div>
+      <div class="models">
+        <span class="model-tag">ARIMA</span>
+        <span class="model-tag">SARIMA</span>
+        <span class="model-tag">ARIMAX</span>
+        <span class="model-tag">Exp. Smoothing</span>
+        <span class="model-tag">TBATS</span>
+        <span class="model-tag">VAR</span>
+      </div>
+      <div class="use-case"><strong>Best for:</strong> small data, interpretability, multivariate series</div>
+      <div class="libs">
+        <span class="libs-label">libs</span>
+        <span class="lib-chip">statsmodels</span>
+        <span class="lib-chip">pmdarima</span>
+      </div>
+    </div>
+
+    <!-- 02 Machine Learning -->
+    <div class="card c2">
+      <span class="card-num">02</span>
+      <div class="card-bar"></div>
+      <div class="card-icon">&#9874;</div>
+      <div class="card-title">Machine Learning</div>
+      <div class="card-desc">General-purpose ML on time series</div>
+      <div class="models">
+        <span class="model-tag">Linear Regression</span>
+        <span class="model-tag">Random Forest</span>
+        <span class="model-tag">XGBoost</span>
+        <span class="model-tag">LightGBM</span>
+        <span class="model-tag">SVR</span>
+        <span class="model-tag">kNN</span>
+      </div>
+      <div class="use-case"><strong>Best for:</strong> feature-rich tabular data, large datasets</div>
+      <div class="libs">
+        <span class="libs-label">libs</span>
+        <span class="lib-chip">scikit-learn</span>
+        <span class="lib-chip">xgboost</span>
+        <span class="lib-chip">lightgbm</span>
+      </div>
+    </div>
+
+    <!-- 03 Deep Learning -->
+    <div class="card c3">
+      <span class="card-num">03</span>
+      <div class="card-bar"></div>
+      <div class="card-icon">&#10040;</div>
+      <div class="card-title">Deep Learning / Neural Nets</div>
+      <div class="card-desc">Complex, large-scale pattern learning</div>
+      <div class="models">
+        <span class="model-tag">LSTM</span>
+        <span class="model-tag">GRU</span>
+        <span class="model-tag">CNN-LSTM</span>
+        <span class="model-tag">TFT</span>
+        <span class="model-tag">N-BEATS</span>
+        <span class="model-tag">N-HiTS</span>
+        <span class="model-tag">PatchTST</span>
+      </div>
+      <div class="use-case"><strong>Best for:</strong> large data, complex temporal patterns</div>
+      <div class="libs">
+        <span class="libs-label">libs</span>
+        <span class="lib-chip">PyTorch</span>
+        <span class="lib-chip">TensorFlow</span>
+        <span class="lib-chip">neuralforecast</span>
+      </div>
+    </div>
+
+    <!-- 04 Decomposition -->
+    <div class="card c4">
+      <span class="card-num">04</span>
+      <div class="card-bar"></div>
+      <div class="card-icon">&#9783;</div>
+      <div class="card-title">Decomposition-Based</div>
+      <div class="card-desc">Trend + seasonality + residual</div>
+      <div class="models">
+        <span class="model-tag">Prophet</span>
+        <span class="model-tag">NeuralProphet</span>
+        <span class="model-tag">STL</span>
+        <span class="model-tag">Theta Model</span>
+      </div>
+      <div class="use-case"><strong>Best for:</strong> strong trend & seasonality focus</div>
+      <div class="libs">
+        <span class="libs-label">libs</span>
+        <span class="lib-chip">prophet</span>
+        <span class="lib-chip">neuralprophet</span>
+        <span class="lib-chip">statsmodels</span>
+      </div>
+    </div>
+
+    <!-- 05 Ensemble -->
+    <div class="card c5">
+      <span class="card-num">05</span>
+      <div class="card-bar"></div>
+      <div class="card-icon">&#11835;</div>
+      <div class="card-title">Ensemble & Hybrid</div>
+      <div class="card-desc">Combine models for maximum accuracy</div>
+      <div class="models">
+        <span class="model-tag">Stacking</span>
+        <span class="model-tag">Bagging</span>
+        <span class="model-tag">Boosting</span>
+        <span class="model-tag">ARIMA + ML</span>
+        <span class="model-tag">AutoARIMA</span>
+        <span class="model-tag">AutoETS</span>
+      </div>
+      <div class="use-case"><strong>Best for:</strong> maximum forecast accuracy, competitions</div>
+      <div class="libs">
+        <span class="libs-label">libs</span>
+        <span class="lib-chip">mlforecast</span>
+        <span class="lib-chip">statsforecast</span>
+        <span class="lib-chip">pycaret</span>
+      </div>
+    </div>
+
+    <!-- 06 Frameworks -->
+    <div class="card c6">
+      <span class="card-num">06</span>
+      <div class="card-bar"></div>
+      <div class="card-icon">&#11042;</div>
+      <div class="card-title">Specialized Frameworks</div>
+      <div class="card-desc">All-in-one forecasting suites</div>
+      <div class="models">
+        <span class="model-tag">Darts</span>
+        <span class="model-tag">StatsForecast</span>
+        <span class="model-tag">MLForecast</span>
+        <span class="model-tag">Sktime</span>
+        <span class="model-tag">Merlion</span>
+        <span class="model-tag">Greykite</span>
+      </div>
+      <div class="use-case"><strong>Best for:</strong> end-to-end pipelines, unified APIs</div>
+      <div class="libs">
+        <span class="libs-label">libs</span>
+        <span class="lib-chip">darts</span>
+        <span class="lib-chip">sktime</span>
+        <span class="lib-chip">merlion</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <span>Python Forecasting Models — Reference Guide</span>
+    <span>6 categories &nbsp;·&nbsp; 30+ models &nbsp;·&nbsp; 15+ libraries</span>
+  </footer>
+
+</div>
+
+</body>
+</html>
